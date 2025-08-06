@@ -16,5 +16,3 @@ CFW環境で動作し、URLを入力して任意ファイル（最大16GB）をS
 git clone https://github.com/enswapwar/mikann-file-downloader.git
 cd mikann-file-downloader
 make
-
-ここではgithubactionで自動的にビルドされる。
