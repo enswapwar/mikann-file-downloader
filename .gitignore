@@ -1,1 +1,4 @@
-
+build/
+*.cia
+*.3dsx
+.DS_Store
