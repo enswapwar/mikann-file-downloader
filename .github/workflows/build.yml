@@ -1,1 +1,35 @@
+name: Build 3DS CIA
 
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: リポジトリをクローン
+      uses: actions/checkout@v3
+
+    - name: devkitProをセットアップ
+      uses: devkitPro/actions/devkitpro-install@v1
+      with:
+        toolchain: 3ds
+
+    - name: libcurlをインストール
+      run: |
+        sudo dkp-pacman -Sy --noconfirm 3ds-libcurl
+
+    - name: ビルドを実行
+      run: |
+        make
+
+    - name: 成果物をアップロード（.cia）
+      uses: actions/upload-artifact@v4
+      with:
+        name: mikann-downloader-cia
+        path: |
+          build/*.cia
