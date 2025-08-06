@@ -14,14 +14,19 @@ jobs:
     - name: リポジトリをクローン
       uses: actions/checkout@v3
 
-    - name: devkitProをセットアップ
-      uses: devkitPro/actions/devkitpro-install@v1
-      with:
-        toolchain: 3ds
-
-    - name: libcurlをインストール
+    - name: devkitPro toolchain のセットアップ
       run: |
-        sudo dkp-pacman -Sy --noconfirm 3ds-libcurl
+        sudo apt update
+        sudo apt install -y wget gnupg
+        sudo wget https://apt.devkitpro.org/install-devkitpro-pacman
+        echo | bash install-devkitpro-pacman
+        sudo dkp-pacman -Sy --noconfirm
+        sudo dkp-pacman -S --noconfirm devkitARM 3ds-dev 3ds-libcurl
+
+    - name: devkitPro 環境変数を設定
+      run: |
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
 
     - name: ビルドを実行
       run: |
