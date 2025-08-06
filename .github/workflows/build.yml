@@ -18,8 +18,8 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y wget gnupg
-        sudo wget https://apt.devkitpro.org/install-devkitpro-pacman
-        echo | bash install-devkitpro-pacman
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        sudo bash install-devkitpro-pacman
         sudo dkp-pacman -Sy --noconfirm
         sudo dkp-pacman -S --noconfirm devkitARM 3ds-dev 3ds-libcurl
 
