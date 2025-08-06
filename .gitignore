@@ -1,4 +1,5 @@
 build/
+!.gitkeep
 *.cia
 *.3dsx
 .DS_Store
