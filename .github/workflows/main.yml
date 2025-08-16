@@ -24,7 +24,7 @@ jobs:
       - name: Install devkitPro pacman
         run: |
           set -e
-          PACMAN_ZIP_URL="https://github.com/devkitPro/pacman/releases/download/v6.0.2/pacman.zip"
+          PACMAN_ZIP_URL="https://github.com/devkitPro/pacman/archive/refs/tags/v6.0.2.zip"
           wget -O pacman.zip "$PACMAN_ZIP_URL"
           if [ ! -f pacman.zip ]; then
               echo "pacman.zip が存在しない"
