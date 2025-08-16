@@ -39,6 +39,7 @@ jobs:
 
       - name: Build CIA
         run: |
+          cd $GITHUB_WORKSPACE   # ルートに移動
           make
           bannertool makebanner -i assets/banner.png -a assets/banner.wav -o banner.bnr
           bannertool makesmdh -s "Mikann Downloader" -l "3DS File Downloader" -p "enswapwar" -i assets/icon.png -o icon.icn
