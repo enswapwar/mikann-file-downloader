@@ -19,17 +19,21 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install qrencode p7zip-full -y
-          curl -L https://github.com/Steveice10/bannertool/releases/download/1.2.0/bannertool.zip -o bannertool.zip
-          7z e bannertool.zip linux-x86_64/bannertool
-          chmod +x bannertool
-          sudo mv bannertool /usr/local/bin
-          rm bannertool.zip
-          curl -L https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip -o makerom.zip
-          7z e makerom.zip
-          chmod +x makerom
-          sudo mv makerom /usr/local/bin
-          rm makerom.zip
+          sudo apt-get install qrencode p7zip-full wget unzip -y
+
+          # bannertool install (carstene1ns fork 1.2.1)
+          wget https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.1/bannertool-linux.zip -O bannertool.zip
+          unzip bannertool.zip -d bannertool-bin
+          chmod +x bannertool-bin/bannertool
+          sudo mv bannertool-bin/bannertool /usr/local/bin
+          rm -rf bannertool.zip bannertool-bin
+
+          # makerom install
+          wget https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip -O makerom.zip
+          unzip makerom.zip -d makerom-bin
+          chmod +x makerom-bin/makerom
+          sudo mv makerom-bin/makerom /usr/local/bin
+          rm -rf makerom.zip makerom-bin
 
       - name: Build
         id: build
