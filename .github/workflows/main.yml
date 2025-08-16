@@ -1,4 +1,4 @@
-name: Build 3DS CIA
+name: Build 3DS CIA with Debug
 
 on:
   push:
@@ -16,22 +16,33 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Debug current directory
+        run: |
+          echo "現在の作業ディレクトリ:"
+          pwd
+          echo "ルートの中身:"
+          ls -l
+          echo "GITHUB_WORKSPACE 内身:"
+          cd $GITHUB_WORKSPACE
+          pwd
+          ls -l
+
       - name: Install tools
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential wget unzip p7zip-full qrencode
 
-          # makerom バイナリを取得
+          # makerom バイナリ取得
           wget https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip -O makerom.zip
           unzip makerom.zip -d makerom-bin
           chmod +x makerom-bin/makerom
           sudo mv makerom-bin/makerom /usr/local/bin
           rm -rf makerom.zip makerom-bin
 
-          # bannertool ソースを取得してコンパイル
+          # bannertool ソース取得＆ビルド
           wget https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip -O bannertool.zip
           unzip bannertool.zip
-          cd 3ds-bannertool-1.2.1
+          cd 3ds-bannertool-1.2.1 || exit 1
           make
           sudo mv bannertool /usr/local/bin
           cd ..
@@ -39,7 +50,9 @@ jobs:
 
       - name: Build CIA
         run: |
-          cd $GITHUB_WORKSPACE   # ルートに移動
+          echo "移動して make 実行するぜ…"
+          cd $GITHUB_WORKSPACE || exit 1
+          ls -l
           make
           bannertool makebanner -i assets/banner.png -a assets/banner.wav -o banner.bnr
           bannertool makesmdh -s "Mikann Downloader" -l "3DS File Downloader" -p "enswapwar" -i assets/icon.png -o icon.icn
