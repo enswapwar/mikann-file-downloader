@@ -1,49 +1,56 @@
-name: Build 3DS Downloader
+name: Build 3DS CIA
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
+      # ソースコードをチェックアウト
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup dependencies
+      # devkitPro / devkitARM をインストール
+      - name: Install devkitARM
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake wget unzip p7zip-full libpng16-16 libqrencode4 qrencode
+          sudo apt-get install -y git curl tar unzip build-essential
+          mkdir -p $HOME/devkitPro
+          cd $HOME/devkitPro
+          curl -LO https://downloads.devkitpro.org/devkitARM/devkitARM-setup.tar.bz2
+          tar -xjf devkitARM-setup.tar.bz2
+          export DEVKITPRO=$HOME/devkitPro
+          export DEVKITARM=$DEVKITPRO/devkitARM
+          export PATH=$DEVKITARM/bin:$PATH
 
+      # makerom と bannertool をダウンロード
       - name: Download makerom
         run: |
-          wget -O makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip
+          curl -L -o makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip
           unzip makerom.zip -d makerom-bin
           chmod +x makerom-bin/makerom
 
-      - name: Download 3ds-bannertool
+      - name: Download bannertool
         run: |
-          wget -O bannertool.zip https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip
+          curl -L -o bannertool.zip https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip
           unzip bannertool.zip
           cd 3ds-bannertool-1.2.1
           mkdir -p build
           cd build
           cmake ..
           make
-          sudo mv bannertool /usr/local/bin
 
-      - name: Build mikann-file-downloader
+      # 実際に make 実行して CIA 作成
+      - name: Build CIA
         run: |
           make
 
-      - name: Upload Artifacts
+      # 完成品をアップロード
+      - name: Upload CIA
         uses: actions/upload-artifact@v4
         with:
-          name: mikann-file-downloader
-          path: |
-            build/*.cia
-            makerom-bin/makerom
-            /usr/local/bin/bannertool
+          name: mikann-file-downloader-cia
+          path: build/*.cia
