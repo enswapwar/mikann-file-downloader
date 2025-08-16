@@ -1,56 +1,26 @@
-name: Build 3DS CIA
+name: Build 3DS Cia
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      # ソースコードをチェックアウト
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # devkitPro / devkitARM をインストール
-      - name: Install devkitARM
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git curl tar unzip build-essential
-          mkdir -p $HOME/devkitPro
-          cd $HOME/devkitPro
-          curl -LO https://downloads.devkitpro.org/devkitARM/devkitARM-setup.tar.bz2
-          tar -xjf devkitARM-setup.tar.bz2
-          export DEVKITPRO=$HOME/devkitPro
-          export DEVKITARM=$DEVKITPRO/devkitARM
-          export PATH=$DEVKITARM/bin:$PATH
-
-      # makerom と bannertool をダウンロード
-      - name: Download makerom
-        run: |
-          curl -L -o makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip
-          unzip makerom.zip -d makerom-bin
-          chmod +x makerom-bin/makerom
-
-      - name: Download bannertool
-        run: |
-          curl -L -o bannertool.zip https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip
-          unzip bannertool.zip
-          cd 3ds-bannertool-1.2.1
-          mkdir -p build
-          cd build
-          cmake ..
-          make
-
-      # 実際に make 実行して CIA 作成
-      - name: Build CIA
-        run: |
-          make
-
-      # 完成品をアップロード
-      - name: Upload CIA
-        uses: actions/upload-artifact@v4
-        with:
-          name: mikann-file-downloader-cia
-          path: build/*.cia
+    - uses: actions/checkout@v4
+    - run: |
+        sudo apt update
+        sudo apt install -y git curl unzip build-essential
+    - run: |
+        curl -L https://devkitpro.org/devkitpro-pacman/install-devkitpro-pacman.sh -o install-devkitpro-pacman.sh
+        chmod +x install-devkitpro-pacman.sh
+        sudo ./install-devkitpro-pacman.sh
+    - run: |
+        echo "export DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "export DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+        echo "export PATH=/opt/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_ENV
+    - run: make
