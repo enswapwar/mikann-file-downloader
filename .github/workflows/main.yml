@@ -2,8 +2,7 @@ name: Build 3DS Cia
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -11,16 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - run: |
+    - name: リポジトリをチェックアウト
+      uses: actions/checkout@v4
+
+    - name: 基本パッケージインストール
+      run: |
         sudo apt update
         sudo apt install -y git curl unzip build-essential
-    - run: |
-        curl -L https://devkitpro.org/devkitpro-pacman/install-devkitpro-pacman.sh -o install-devkitpro-pacman.sh
-        chmod +x install-devkitpro-pacman.sh
-        sudo ./install-devkitpro-pacman.sh
-    - run: |
+
+    - name: devkitPro pacman を直接インストール
+      run: |
+        curl -L https://github.com/devkitPro/pacman/releases/download/v0.12.7/pacman-v0.12.7-linux.zip -o pacman.zip
+        unzip pacman.zip -d pacman
+        sudo ./pacman/install.sh
+
+    - name: パスを通す
+      run: |
         echo "export DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
         echo "export DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
         echo "export PATH=/opt/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_ENV
-    - run: make
+
+    - name: ビルド
+      run: make
