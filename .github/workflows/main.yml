@@ -19,16 +19,20 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install qrencode p7zip-full wget unzip -y
+          sudo apt-get install qrencode p7zip-full wget unzip build-essential cmake -y
 
-          # bannertool install (carstene1ns fork 1.2.1 Source zip)
-          wget https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip -O bannertool.zip
+          # bannertool install from source 1.2.0
+          wget https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.0.zip -O bannertool.zip
           unzip bannertool.zip
-          chmod +x 3ds-bannertool-1.2.1/bannertool
-          sudo mv 3ds-bannertool-1.2.1/bannertool /usr/local/bin
-          rm -rf bannertool.zip 3ds-bannertool-1.2.1
+          cd 3ds-bannertool-1.2.0
+          mkdir build && cd build
+          cmake ..
+          make
+          sudo mv bannertool /usr/local/bin
+          cd ../..
+          rm -rf bannertool.zip 3ds-bannertool-1.2.0
 
-          # makerom install
+          # makerom install (既存手順)
           wget https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip -O makerom.zip
           unzip makerom.zip -d makerom-bin
           chmod +x makerom-bin/makerom
