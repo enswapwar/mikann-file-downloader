@@ -1,4 +1,5 @@
-name: Build 3DS Cia
+# .github/workflows/build.yml
+name: Build 3DS CIA
 
 on:
   push:
@@ -8,27 +9,46 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    container:
+      image: ubuntu:22.04
     steps:
-    - name: リポジトリをチェックアウト
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: 基本パッケージインストール
-      run: |
-        sudo apt update
-        sudo apt install -y git curl unzip build-essential
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y wget unzip tar build-essential git cmake p7zip-full python3
 
-    - name: devkitPro pacman を直接インストール
-      run: |
-        curl -L https://github.com/devkitPro/pacman/releases/download/v0.12.7/pacman-v0.12.7-linux.zip -o pacman.zip
-        unzip pacman.zip -d pacman
-        sudo ./pacman/install.sh
+      - name: Install devkitPro pacman
+        run: |
+          mkdir -p /opt/devkitpro
+          wget https://downloads.devkitpro.org/devkitpro-pacman-x86_64.tar.xz
+          tar -xf devkitpro-pacman-x86_64.tar.xz -C /opt/devkitpro
+          export DEVKITPRO=/opt/devkitpro
+          export PATH=$DEVKITPRO/tools/bin:$PATH
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm devkitARM
 
-    - name: パスを通す
-      run: |
-        echo "export DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "export DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-        echo "export PATH=/opt/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_ENV
+      - name: Build 3DS BannerTool
+        run: |
+          wget https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip -O bannertool.zip
+          unzip bannertool.zip
+          mkdir -p build
+          cd 3ds-bannertool-1.2.1
+          mkdir build && cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/devkitARM.cmake
+          make -j$(nproc)
+          cd ../../
+          cp 3ds-bannertool-1.2.1/build/bannertool ./build/
 
-    - name: ビルド
-      run: make
+      - name: Build CIA
+        run: |
+          mkdir -p build/cia
+          $DEVKITPRO/tools/bin/makerom -f cia -o build/cia/output.cia -d assets content/
+
+      - name: Upload CIA
+        uses: actions/upload-artifact@v4
+        with:
+          name: cia
+          path: build/cia/output.cia
