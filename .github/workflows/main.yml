@@ -2,70 +2,34 @@ name: Build CIA
 
 on:
   push:
-    branches:
-      - "main"
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm
-    name: Build with devkitARM
+    container:
+      image: devkitpro/devkitarm:latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Install dependencies
+      - name: Build CIA
         run: |
-          apt-get update
-          apt-get install -y wget unzip build-essential git p7zip-full qrencode
-
-      - name: Install devkitPro pacman
-        run: |
-          set -e
-          PACMAN_ZIP_URL="https://github.com/devkitPro/pacman/archive/refs/tags/v6.0.2.zip"
-          wget -O pacman.zip "$PACMAN_ZIP_URL"
-          if [ ! -f pacman.zip ]; then
-              echo "pacman.zip が存在しない"
-              exit 1
-          fi
-          unzip -o pacman.zip
-          cd pacman-*
-          ./install.sh
-
-      - name: Install bannertool
-        run: |
-          set -e
-          wget -O bannertool.zip https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip
-          unzip -o bannertool.zip
-          cd 3ds-bannertool-1.2.1
-          make
-          cp bannertool /usr/local/bin/
-          cd ..
-
-      - name: Install makerom
-        run: |
-          set -e
-          wget -O makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip
-          7z e makerom.zip
-          chmod +x makerom
-          mv makerom /usr/local/bin/
-
-      - name: Build project
-        run: |
-          set -e
           make
           bannertool makebanner -i assets/banner.png -a assets/banner.wav -o banner.bnr
           bannertool makesmdh -s "httpd" -l "3ds-httpd" -p "Dimaguy" -i assets/icon.png -o icon.icn
-          makerom -f cia -o 3ds-httpd.cia -rsf assets/httpd.rsf -target t -exefslogo -elf 3ds-httpd.elf -icon icon.icn -banner banner.bnr
+          makerom -f cia -o mikann-downloader.cia \
+            -rsf assets/httpd.rsf \
+            -target t -exefslogo \
+            -elf build/mikann-downloader.elf \
+            -icon icon.icn -banner banner.bnr
           mkdir -p artifacts
-          cp 3ds-httpd.3dsx artifacts/
-          cp 3ds-httpd.elf artifacts/
-          cp 3ds-httpd.smdh artifacts/
-          cp 3ds-httpd.cia artifacts/
+          cp build/*.3dsx artifacts/ || true
+          cp build/*.elf artifacts/ || true
+          cp build/*.smdh artifacts/ || true
+          cp *.cia artifacts/ || true
 
-      - name: Upload build
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build
