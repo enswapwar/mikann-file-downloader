@@ -21,12 +21,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install qrencode p7zip-full wget unzip -y
 
-          # bannertool install (carstene1ns fork 1.2.1)
-          wget https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.1/bannertool-linux.zip -O bannertool.zip
-          unzip bannertool.zip -d bannertool-bin
-          chmod +x bannertool-bin/bannertool
-          sudo mv bannertool-bin/bannertool /usr/local/bin
-          rm -rf bannertool.zip bannertool-bin
+          # bannertool install (carstene1ns fork 1.2.1 Source zip)
+          wget https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip -O bannertool.zip
+          unzip bannertool.zip
+          chmod +x 3ds-bannertool-1.2.1/bannertool
+          sudo mv 3ds-bannertool-1.2.1/bannertool /usr/local/bin
+          rm -rf bannertool.zip 3ds-bannertool-1.2.1
 
           # makerom install
           wget https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip -O makerom.zip
