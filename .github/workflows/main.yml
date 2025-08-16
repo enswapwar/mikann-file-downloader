@@ -1,54 +1,72 @@
-# .github/workflows/build.yml
-name: Build 3DS CIA
+name: Build CIA
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - "main"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:22.04
+    container: devkitpro/devkitarm
+    name: Build with devkitARM
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y wget unzip tar build-essential git cmake p7zip-full python3
+          apt-get install -y wget unzip build-essential git p7zip-full qrencode
 
       - name: Install devkitPro pacman
         run: |
-          mkdir -p /opt/devkitpro
-          wget https://downloads.devkitpro.org/devkitpro-pacman-x86_64.tar.xz
-          tar -xf devkitpro-pacman-x86_64.tar.xz -C /opt/devkitpro
-          export DEVKITPRO=/opt/devkitpro
-          export PATH=$DEVKITPRO/tools/bin:$PATH
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm devkitARM
+          set -e
+          PACMAN_ZIP_URL="https://github.com/devkitPro/pacman/releases/download/v6.0.2/pacman.zip"
+          wget -O pacman.zip "$PACMAN_ZIP_URL"
+          if [ ! -f pacman.zip ]; then
+              echo "pacman.zip が存在しない"
+              exit 1
+          fi
+          unzip -o pacman.zip
+          cd pacman-*
+          ./install.sh
 
-      - name: Build 3DS BannerTool
+      - name: Install bannertool
         run: |
-          wget https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip -O bannertool.zip
-          unzip bannertool.zip
-          mkdir -p build
+          set -e
+          wget -O bannertool.zip https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip
+          unzip -o bannertool.zip
           cd 3ds-bannertool-1.2.1
-          mkdir build && cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/devkitARM.cmake
-          make -j$(nproc)
-          cd ../../
-          cp 3ds-bannertool-1.2.1/build/bannertool ./build/
+          make
+          cp bannertool /usr/local/bin/
+          cd ..
 
-      - name: Build CIA
+      - name: Install makerom
         run: |
-          mkdir -p build/cia
-          $DEVKITPRO/tools/bin/makerom -f cia -o build/cia/output.cia -d assets content/
+          set -e
+          wget -O makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip
+          7z e makerom.zip
+          chmod +x makerom
+          mv makerom /usr/local/bin/
 
-      - name: Upload CIA
+      - name: Build project
+        run: |
+          set -e
+          make
+          bannertool makebanner -i assets/banner.png -a assets/banner.wav -o banner.bnr
+          bannertool makesmdh -s "httpd" -l "3ds-httpd" -p "Dimaguy" -i assets/icon.png -o icon.icn
+          makerom -f cia -o 3ds-httpd.cia -rsf assets/httpd.rsf -target t -exefslogo -elf 3ds-httpd.elf -icon icon.icn -banner banner.bnr
+          mkdir -p artifacts
+          cp 3ds-httpd.3dsx artifacts/
+          cp 3ds-httpd.elf artifacts/
+          cp 3ds-httpd.smdh artifacts/
+          cp 3ds-httpd.cia artifacts/
+
+      - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: cia
-          path: build/cia/output.cia
+          name: build
+          path: artifacts/*
