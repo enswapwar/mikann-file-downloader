@@ -1,81 +1,49 @@
-name: Build 3DS CIA with Debug
+name: Build 3DS Downloader
 
 on:
   push:
-    branches:
-      - "main"
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm
-    name: Build with Docker using devkitARM
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Debug current directory
-        run: |
-          echo "現在の作業ディレクトリ:"
-          pwd
-          echo "ルートの中身:"
-          ls -l
-          echo "GITHUB_WORKSPACE 内身:"
-          cd $GITHUB_WORKSPACE
-          pwd
-          ls -l
-
-      - name: Install tools
+      - name: Setup dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential wget unzip p7zip-full qrencode
+          sudo apt-get install -y build-essential cmake wget unzip p7zip-full libpng16-16 libqrencode4 qrencode
 
-          # makerom バイナリ取得
-          wget https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip -O makerom.zip
+      - name: Download makerom
+        run: |
+          wget -O makerom.zip https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip
           unzip makerom.zip -d makerom-bin
           chmod +x makerom-bin/makerom
-          sudo mv makerom-bin/makerom /usr/local/bin
-          rm -rf makerom.zip makerom-bin
 
-          # bannertool ソース取得＆ビルド
-          wget https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip -O bannertool.zip
+      - name: Download 3ds-bannertool
+        run: |
+          wget -O bannertool.zip https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip
           unzip bannertool.zip
-          cd 3ds-bannertool-1.2.1 || exit 1
+          cd 3ds-bannertool-1.2.1
+          mkdir -p build
+          cd build
+          cmake ..
           make
           sudo mv bannertool /usr/local/bin
-          cd ..
-          rm -rf bannertool.zip 3ds-bannertool-1.2.1
 
-      - name: Build CIA
+      - name: Build mikann-file-downloader
         run: |
-          echo "移動して make 実行するぜ…"
-          cd $GITHUB_WORKSPACE || exit 1
-          ls -l
           make
-          bannertool makebanner -i assets/banner.png -a assets/banner.wav -o banner.bnr
-          bannertool makesmdh -s "Mikann Downloader" -l "3DS File Downloader" -p "enswapwar" -i assets/icon.png -o icon.icn
-          makerom -f cia -o mikann-downloader.cia -rsf assets/meta.rsf -target t -exefslogo -elf build/mikann-downloader.elf -icon icon.icn -banner banner.bnr
-          mkdir -p ~/artifacts
-          cp build/mikann-downloader.elf ~/artifacts
-          cp build/mikann-downloader.3dsx ~/artifacts || true
-          cp mikann-downloader.cia ~/artifacts
 
-      - name: Upload build artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build
-          path: ~/artifacts/*
-
-      - name: Publish pre-release
-        uses: marvinpinto/action-automatic-releases@latest
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "nightly"
-          prerelease: true
-          title: "Nightly Build"
-          files: |
-            ~/artifacts/mikann-downloader.cia
-            ~/artifacts/mikann-downloader.elf
-            ~/artifacts/mikann-downloader.3dsx
+          name: mikann-file-downloader
+          path: |
+            build/*.cia
+            makerom-bin/makerom
+            /usr/local/bin/bannertool
