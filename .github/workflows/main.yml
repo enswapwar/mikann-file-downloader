@@ -1,36 +1,43 @@
-name: Build CIA
+name: Build 3DS CIA
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget build-essential
+          sudo apt-get install -y wget
 
-      - name: Install devkitPro pacman
+      - name: Install devkitPro via official installer
         run: |
-          wget https://github.com/devkitPro/pacman/releases/download/v6.0.2/devkitpro-pacman.amd64.deb
-          sudo apt install ./devkitpro-pacman.amd64.deb
+          wget https://apt.devkitpro.org/install-devkitpro-pacman -O install-devkitpro-pacman.sh
+          chmod +x install-devkitpro-pacman.sh
+          sudo ./install-devkitpro-pacman.sh
 
-      - name: Install devkitARM
+      - name: Install devkitARM & 3DS libraries
         run: |
-          sudo dkp-pacman -Sy --noconfirm devkitARM 3ds-dev
+          sudo dkp-pacman -Syu --noconfirm
+          sudo dkp-pacman -S --noconfirm devkitARM 3ds-dev
 
       - name: Build CIA
         run: |
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=$DEVKITPRO/devkitARM
           make
+          mkdir -p artifacts
+          cp -f build/*.cia artifacts/ || true
 
-      - name: Upload artifacts
+      - name: Upload CIA
         uses: actions/upload-artifact@v4
         with:
           name: cia-build
-          path: build/*
+          path: artifacts/
