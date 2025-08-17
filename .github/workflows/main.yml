@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitarm:latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -16,21 +17,13 @@ jobs:
       - name: Build CIA
         run: |
           make
-          bannertool makebanner -i assets/banner.png -a assets/banner.wav -o banner.bnr
-          bannertool makesmdh -s "httpd" -l "3ds-httpd" -p "Dimaguy" -i assets/icon.png -o icon.icn
-          makerom -f cia -o mikann-downloader.cia \
-            -rsf assets/httpd.rsf \
-            -target t -exefslogo \
-            -elf build/mikann-downloader.elf \
-            -icon icon.icn -banner banner.bnr
           mkdir -p artifacts
-          cp build/*.3dsx artifacts/ || true
+          cp build/*.cia artifacts/ || true
           cp build/*.elf artifacts/ || true
-          cp build/*.smdh artifacts/ || true
-          cp *.cia artifacts/ || true
+          cp build/*.3dsx artifacts/ || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build
+          name: mikann-build
           path: artifacts/*
