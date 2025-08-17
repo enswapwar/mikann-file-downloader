@@ -1,44 +1,36 @@
 name: Build CIA
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential git cmake libpng-dev pkg-config
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget build-essential
 
-    - name: Setup devkitPro
-      run: |
-        sudo mkdir -p /opt/devkitpro
-        cd /opt/devkitpro
-        git clone https://github.com/devkitPro/pacman.git
-        cd pacman
-        sudo make install
+      - name: Install devkitPro pacman
+        run: |
+          wget https://github.com/devkitPro/pacman/releases/download/v6.0.2/devkitpro-pacman.amd64.deb
+          sudo apt install ./devkitpro-pacman.amd64.deb
 
-    - name: Setup env
-      run: |
-        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-        echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
+      - name: Install devkitARM
+        run: |
+          sudo dkp-pacman -Sy --noconfirm devkitARM 3ds-dev
 
-    - name: Build
-      run: |
-        make
+      - name: Build CIA
+        run: |
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=$DEVKITPRO/devkitARM
+          make
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: cia-build
-        path: build/*
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cia-build
+          path: build/*
