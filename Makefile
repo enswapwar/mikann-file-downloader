@@ -18,7 +18,7 @@ LIBS := -lctru -lm
 CFILES := $(wildcard $(SOURCE)/*.c)
 OFILES := $(CFILES:$(SOURCE)/%.c=$(BUILD)/%.o)
 
-CC := arm-none-eabi-gcc
+CC := $(DEVKITARM)/bin/arm-none-eabi-gcc
 CFLAGS := -g -Wall -O2 -mfloat-abi=hard -mtp=soft -fno-rtti -fno-exceptions -I$(INCLUDE)
 
 .PHONY: all clean
