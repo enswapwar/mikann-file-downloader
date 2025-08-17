@@ -1,0 +1,29 @@
+BasicInfo:
+  Title                   : "Mikann File Downloader"
+  CompanyCode             : "00"
+  ProductCode             : "CTR-P-MIKN"
+  ContentType             : Application
+  UniqueId                : 0x12345
+
+RomFs:
+  RootPath                : "romfs"
+
+ExeFs:
+  ReadOnly:
+  ReadWrite:
+  ExeFsDir                : "exefs"
+  PlainRegion:
+  Logo:
+
+AccessControlInfo:
+  FileSystemAccess:
+    - CategorySystemApplication
+    - CategoryHardwareCheck
+    - CategoryFileSystemTool
+  ServiceAccessControl:
+  ResourceLimitCategory   : "Application"
+
+SystemControlInfo:
+  SaveDataSize: 0
+  RemasterVersion: 0
+  StackSize: 0x40000
