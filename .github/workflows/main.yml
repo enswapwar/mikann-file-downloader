@@ -1,66 +1,44 @@
-name: Build 3DS CIA
+name: Build CIA
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: devkitpro/devkitarm:latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      # devkitARM/bin を PATH に通す（これが無いと arm-none-eabi-gcc が見つからない）
-      - name: Add devkitPro toolchains to PATH
-        run: |
-          echo "$DEVKITARM/bin" >> "$GITHUB_PATH"
-          echo "$DEVKITPRO/tools/bin" >> "$GITHUB_PATH"
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git cmake libpng-dev pkg-config
 
-      # デバッグ用（壊れたらログ見りゃ一発）
-      - name: Verify toolchain exists
-        run: |
-          echo "DEVKITPRO=$DEVKITPRO"
-          echo "DEVKITARM=$DEVKITARM"
-          ls -l "$DEVKITARM/bin" || true
-          which arm-none-eabi-gcc || true
+    - name: Setup devkitPro
+      run: |
+        sudo mkdir -p /opt/devkitpro
+        cd /opt/devkitpro
+        git clone https://github.com/devkitPro/pacman.git
+        cd pacman
+        sudo make install
 
-      # meta.rsf が無い場合だけ最小構成を生成（YAML事故回避のため printf で書く）
-      - name: Ensure meta.rsf
-        run: |
-          if [ ! -f meta.rsf ]; then
-            printf '%s\n' \
-'BasicInfo:' \
-'  Title                   : "Mikann File Downloader"' \
-'  ProductCode             : "CTR-P-MIKN"' \
-'  UniqueId                : 0x12345' \
-'SystemControlInfo:' \
-'  SaveDataSize            : 0KB' \
-'  RemasterVersion         : 1' \
-'AccessControlInfo:' \
-'  EnableL2Cache           : true' \
-> meta.rsf
-          fi
+    - name: Setup env
+      run: |
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+        echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
 
-      - name: Build
-        run: |
-          make -j2
+    - name: Build
+      run: |
+        make
 
-      - name: Collect artifacts
-        run: |
-          mkdir -p artifacts
-          cp -f build/*.elf  artifacts/ 2>/dev/null || true
-          cp -f build/*.3dsx artifacts/ 2>/dev/null || true
-          cp -f build/*.cia  artifacts/ 2>/dev/null || true
-          cp -f ./*.cia      artifacts/ 2>/dev/null || true
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mikann-build
-          path: artifacts
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: cia-build
+        path: build/*
