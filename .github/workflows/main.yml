@@ -1,49 +1,39 @@
-name: Build Mikann File Downloader
+name: Build 3DS CIA
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      DEVKITPRO: /opt/devkitpro
-      DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y wget tar bzip2 zip make cmake
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y wget tar bzip2 make libctru-dev
 
-    - name: Install devkitPro
-      run: |
-        wget https://apt.devkitpro.org/install-devkitpro-pacman
-        chmod +x install-devkitpro-pacman
-        sudo ./install-devkitpro-pacman
-        sudo dkp-pacman -Syu --noconfirm
-        sudo dkp-pacman -S --noconfirm devkitARM 3ds-dev
+      - name: Download devkitARM
+        run: |
+          mkdir -p $HOME/devkitpro
+          wget https://github.com/devkitPro/buildscripts/releases/download/devkitARM_r47/devkitARM_r47-linux.tar.bz2
+          tar -xjf devkitARM_r47-linux.tar.bz2 -C $HOME/devkitpro
+          echo "DEVKITPRO=$HOME/devkitpro" >> $GITHUB_ENV
+          echo "DEVKITARM=$HOME/devkitpro/devkitARM" >> $GITHUB_ENV
+          echo "$HOME/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_PATH
 
-    - name: Set environment
-      run: |
-        echo "export DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "export DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-        echo "export PATH=$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
+      - name: Make build directory
+        run: mkdir -p build
 
-    - name: Build Cia
-      run: |
-        mkdir -p build
-        make all
+      - name: Build CIA
+        run: make all
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: cia-artifacts
-        path: |
-          build/*.cia
-          build/*.3dsx
-          build/*.elf
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cia-build
+          path: build/
