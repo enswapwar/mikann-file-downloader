@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y wget tar bzip2 make libctru-dev
+        run: sudo apt-get update && sudo apt-get install -y wget tar bzip2 make git
 
       - name: Download devkitARM
         run: |
@@ -25,6 +25,10 @@ jobs:
           echo "DEVKITPRO=$HOME/devkitpro" >> $GITHUB_ENV
           echo "DEVKITARM=$HOME/devkitpro/devkitARM" >> $GITHUB_ENV
           echo "$HOME/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_PATH
+
+      - name: Download ctrulib
+        run: |
+          git clone --depth=1 https://github.com/devkitPro/ctrulib.git $HOME/devkitpro/portlibs/ctrulib
 
       - name: Make build directory
         run: mkdir -p build
