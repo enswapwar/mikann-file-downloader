@@ -4,40 +4,46 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-cia:
     runs-on: ubuntu-latest
 
+    env:
+      DEVKITPRO: ${{ github.workspace }}/devkitpro
+      DEVKITARM: ${{ github.workspace }}/devkitpro/devkitARM
+      PATH: ${{ github.workspace }}/devkitpro/devkitARM/bin:$PATH
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y wget tar bzip2 make git
+    - name: Install dependencies
+      run: sudo apt update && sudo apt install -y wget bzip2 tar make
 
-      - name: Download devkitARM
-        run: |
-          mkdir -p $HOME/devkitpro
-          wget https://wii.leseratte10.de/devkitPro/devkitARM/r47%20%282017%29/devkitARM_r47-x86_64-linux.tar.bz2
-          tar -xjf devkitARM_r47-x86_64-linux.tar.bz2 -C $HOME/devkitpro
-          echo "DEVKITPRO=$HOME/devkitpro" >> $GITHUB_ENV
-          echo "DEVKITARM=$HOME/devkitpro/devkitARM" >> $GITHUB_ENV
-          echo "$HOME/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_PATH
+    - name: Setup devkitARM
+      run: |
+        mkdir -p $DEVKITPRO
+        cd $DEVKITPRO
+        # 最新の devkitARM r47 以降の tar.bz2 直ダウンロードURLに置き換えてください
+        wget -O devkitARM.tar.bz2 https://github.com/devkitPro/buildscripts/releases/download/devkitARM_r47/devkitARM_r47-linux.tar.bz2 || true
+        tar -xjf devkitARM.tar.bz2
+        ls -l $DEVKITARM/bin
 
-      - name: Download ctrulib
-        run: |
-          git clone --depth=1 https://github.com/devkitPro/ctrulib.git $HOME/devkitpro/portlibs/ctrulib
+    - name: Setup ctrulib
+      run: |
+        mkdir -p $DEVKITPRO/portlibs
+        curl -L https://github.com/devkitPro/ctrulib/archive/refs/heads/master.tar.gz | tar xz -C $DEVKITPRO/portlibs --strip-components=1
 
-      - name: Make build directory
-        run: mkdir -p build
+    - name: Build CIA
+      run: |
+        mkdir -p build
+        make all
+        ls -l build
 
-      - name: Build CIA
-        run: make all
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: cia-build
-          path: build/
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: cia-artifacts
+        path: build/*.cia
