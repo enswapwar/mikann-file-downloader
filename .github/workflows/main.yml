@@ -1,43 +1,49 @@
-name: Build 3DS CIA
+name: Build Mikann File Downloader
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DEVKITPRO: /opt/devkitpro
+      DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Install prerequisites
-      run: |
-        sudo apt update
-        sudo apt install -y wget unzip tar bzip2 make
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y wget tar bzip2 zip make cmake
 
-    - name: Download and install devkitPro pacman
+    - name: Install devkitPro
       run: |
-        wget https://github.com/devkitPro/pacman/releases/download/v6.0.2/devkitpro-pacman-amd64.deb
-        sudo dpkg -i devkitpro-pacman-amd64.deb
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x install-devkitpro-pacman
+        sudo ./install-devkitpro-pacman
         sudo dkp-pacman -Syu --noconfirm
         sudo dkp-pacman -S --noconfirm devkitARM 3ds-dev
 
-    - name: Add devkitPro to PATH
+    - name: Set environment
       run: |
         echo "export DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "export DEVKITARM=$DEVKITPRO/devkitARM" >> $GITHUB_ENV
+        echo "export DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
         echo "export PATH=$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Build CIA
+    - name: Build Cia
       run: |
-        make
+        mkdir -p build
+        make all
 
-    - name: Upload build artifacts
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: 3ds-build
-        path: build/
+        name: cia-artifacts
+        path: |
+          build/*.cia
+          build/*.3dsx
+          build/*.elf
