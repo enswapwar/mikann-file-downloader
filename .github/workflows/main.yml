@@ -1,29 +1,64 @@
-name: Build CIA
+name: Build 3DS CIA
 
 on:
   push:
+    branches: [ "main" ]
+  pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: devkitpro/devkitarm:latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build CIA
+      - name: Install dependencies
         run: |
-          make
+          sudo apt-get update
+          sudo apt-get install -y wget unzip bzip2 p7zip-full
+
+      - name: Install devkitPro pacman + devkitARM
+        run: |
+          wget https://github.com/devkitPro/pacman/releases/download/v1.0.2/devkitpro-pacman.amd64.deb
+          sudo dpkg -i devkitpro-pacman.amd64.deb
+          sudo dkp-pacman -Syu --noconfirm devkitARM 3dstools
+
+      - name: Setup env
+        run: |
+          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+          echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
+
+      - name: Create dummy meta.rsf
+        run: |
+          cat > meta.rsf <<EOF
+BasicInfo:
+  Title                   : Mikann File Downloader
+  ProductCode             : CTR-P-MIKN
+  UniqueId                : 0x12345
+SystemControlInfo:
+  SaveDataSize            : 0KB
+  RemasterVersion         : 1
+AccessControlInfo:
+  ExtSaveDataId           : 0x12345
+  UseOtherVariationSaveData : false
+  EnableL2Cache           : true
+EOF
+
+      - name: Build CIA
+        run: make
+
+      - name: Collect Artifacts
+        run: |
           mkdir -p artifacts
           cp build/*.cia artifacts/ || true
           cp build/*.elf artifacts/ || true
           cp build/*.3dsx artifacts/ || true
 
-      - name: Upload artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mikann-build
-          path: artifacts/*
+          name: 3ds-build
+          path: artifacts
