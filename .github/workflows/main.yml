@@ -10,31 +10,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      DEVKITPRO: ${{ runner.temp }}/devkitpro
-      DEVKITARM: ${{ runner.temp }}/devkitpro/devkitARM
-      PATH: ${{ runner.temp }}/devkitpro/devkitARM/bin:${{ runner.temp }}/devkitpro/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
     steps:
       # コードをチェックアウト
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 必要なツールをインストール (tar, wget など)
+      # 必要なツールをインストール
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y tar unzip wget build-essential git python3 python3-pip
 
-      # devkitPro を取得して展開
-      - name: Download devkitPro
+      # devkitPro の pacman スクリプト取得とインストール
+      - name: Install devkitPro
         run: |
+          DEVKITPRO=$HOME/devkitpro
+          DEVKITARM=$DEVKITPRO/devkitARM
           mkdir -p $DEVKITPRO
           wget -O $DEVKITPRO/install-devkitpro-pacman https://apt.devkitpro.org/install-devkitpro-pacman
           chmod +x $DEVKITPRO/install-devkitpro-pacman
           $DEVKITPRO/install-devkitpro-pacman --noninteractive
+          echo "export DEVKITPRO=$DEVKITPRO" >> $GITHUB_ENV
+          echo "export DEVKITARM=$DEVKITARM" >> $GITHUB_ENV
+          echo "export PATH=$DEVKITARM/bin:$DEVKITPRO/tools/bin:$PATH" >> $GITHUB_ENV
 
-      # ctrulib (3DS 用ライブラリ) を取得
+      # ctrulib をクローン
       - name: Clone ctrulib
         run: |
           mkdir -p $DEVKITPRO/portlibs
