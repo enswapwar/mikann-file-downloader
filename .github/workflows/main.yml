@@ -1,57 +1,101 @@
-name: Build CIA
+name: Build 3DS CIA
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
+    # Ubuntu runner 上で devkitpro/devkitarm コンテナを使う（devkitARM が入ってるイメージ）
     runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
 
+    # 確実に DEVKITPRO/DEVKITARM を参照できるように env をセット
     env:
       DEVKITPRO: /opt/devkitpro
       DEVKITARM: /opt/devkitpro/devkitARM
-      PATH: /opt/devkitpro/devkitARM/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Prepare environment variables / PATH
         run: |
-          sudo apt update
-          sudo apt install -y wget bzip2 tar make gcc g++ git
+          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+          # devkitARM の bin を PATH に追加（Makefile が直接参照する場合に備える）
+          echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
 
-      - name: Setup devkitARM
+      - name: Install utilities (inside container)
         run: |
-          mkdir -p $DEVKITPRO
-          cd $DEVKITPRO
-          wget -O devkitARM.tar.bz2 https://github.com/devkitPro/buildscripts/releases/download/devkitARM_r57/devkitARM_r57-linux.tar.bz2
-          /bin/tar -xjf devkitARM.tar.bz2
-          ls -l $DEVKITARM/bin
+          apt-get update
+          apt-get install -y wget unzip p7zip-full cmake build-essential
 
-      - name: Setup ctrulib
+      - name: Install makerom (official binary)
         run: |
-          mkdir -p $DEVKITPRO/libctru
-          git clone --depth=1 https://github.com/devkitPro/libctru.git $DEVKITPRO/libctru
-          cd $DEVKITPRO/libctru && make install
+          # 安定して使える makerom バイナリを落として /usr/local/bin に置く
+          wget -q -O makerom.zip "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip"
+          unzip -o makerom.zip -d makerom_tmp || true
+          if [ -f makerom_tmp/makerom ]; then
+            mv makerom_tmp/makerom /usr/local/bin/makerom
+            chmod +x /usr/local/bin/makerom
+          elif [ -f makerom_tmp/makerom-bin/makerom ]; then
+            mv makerom_tmp/makerom-bin/makerom /usr/local/bin/makerom
+            chmod +x /usr/local/bin/makerom
+          else
+            echo "makerom binary not found; continuing (Makefile may fail later)"
+          fi
+          rm -rf makerom.zip makerom_tmp
 
-      - name: Build CIA
+      - name: Build bannertool from source (needed for banner/icon tools)
+        run: |
+          wget -q -O bannertool.zip "https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip"
+          unzip -o bannertool.zip
+          mkdir -p 3ds-bannertool-1.2.1/build
+          cd 3ds-bannertool-1.2.1/build
+          cmake ..
+          make -j$(nproc) || true
+          # コピーして実行権限
+          if [ -f bannertool ]; then
+            mv bannertool /usr/local/bin/bannertool
+            chmod +x /usr/local/bin/bannertool
+          fi
+          cd $GITHUB_WORKSPACE
+          rm -rf bannertool.zip
+
+      - name: Ensure meta.rsf exists (minimal default if missing)
+        run: |
+          if [ ! -f meta.rsf ]; then
+            printf '%s\n' \
+'BasicInfo:' \
+'  Title                   : "Mikann File Downloader"' \
+'  ProductCode             : "CTR-P-MIKN"' \
+'  UniqueId                : 0x12345' \
+'SystemControlInfo:' \
+'  SaveDataSize            : 0KB' \
+'  RemasterVersion         : 1' \
+> meta.rsf
+          fi
+
+      - name: Build (make -> produces .elf /.3dsx /.cia per Makefile)
         run: |
           mkdir -p build
-          make all
+          make clean || true
+          make -j$(nproc)
 
-      - name: Copy artifacts
+      - name: Collect artifacts
         run: |
           mkdir -p artifacts
-          cp build/*.cia artifacts/ || true
-          cp build/*.elf artifacts/ || true
-          cp build/*.3dsx artifacts/ || true
+          cp -f build/*.cia artifacts/ 2>/dev/null || true
+          cp -f build/*.elf artifacts/ 2>/dev/null || true
+          cp -f build/*.3dsx artifacts/ 2>/dev/null || true
+          cp -f *.cia artifacts/ 2>/dev/null || true
+          ls -l artifacts || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
-          path: artifacts
+          name: cia-build
+          path: artifacts/
