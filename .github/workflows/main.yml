@@ -7,12 +7,10 @@ on:
 
 jobs:
   build:
-    # Ubuntu runner 上で devkitpro/devkitarm コンテナを使う（devkitARM が入ってるイメージ）
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitarm:latest
 
-    # 確実に DEVKITPRO/DEVKITARM を参照できるように env をセット
     env:
       DEVKITPRO: /opt/devkitpro
       DEVKITARM: /opt/devkitpro/devkitARM
@@ -25,7 +23,6 @@ jobs:
         run: |
           echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
           echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-          # devkitARM の bin を PATH に追加（Makefile が直接参照する場合に備える）
           echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
 
       - name: Install utilities (inside container)
@@ -35,7 +32,6 @@ jobs:
 
       - name: Install makerom (official binary)
         run: |
-          # 安定して使える makerom バイナリを落として /usr/local/bin に置く
           wget -q -O makerom.zip "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip"
           unzip -o makerom.zip -d makerom_tmp || true
           if [ -f makerom_tmp/makerom ]; then
@@ -57,7 +53,6 @@ jobs:
           cd 3ds-bannertool-1.2.1/build
           cmake ..
           make -j$(nproc) || true
-          # コピーして実行権限
           if [ -f bannertool ]; then
             mv bannertool /usr/local/bin/bannertool
             chmod +x /usr/local/bin/bannertool
@@ -68,15 +63,15 @@ jobs:
       - name: Ensure meta.rsf exists (minimal default if missing)
         run: |
           if [ ! -f meta.rsf ]; then
-            printf '%s\n' \
-'BasicInfo:' \
-'  Title                   : "Mikann File Downloader"' \
-'  ProductCode             : "CTR-P-MIKN"' \
-'  UniqueId                : 0x12345' \
-'SystemControlInfo:' \
-'  SaveDataSize            : 0KB' \
-'  RemasterVersion         : 1' \
-> meta.rsf
+            cat > meta.rsf <<'EOF'
+BasicInfo:
+  Title                   : "Mikann File Downloader"
+  ProductCode             : "CTR-P-MIKN"
+  UniqueId                : 0x12345
+SystemControlInfo:
+  SaveDataSize            : 0KB
+  RemasterVersion         : 1
+EOF
           fi
 
       - name: Build (make -> produces .elf /.3dsx /.cia per Makefile)
