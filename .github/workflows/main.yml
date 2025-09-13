@@ -2,58 +2,55 @@ name: Build Mikann File Downloader CIA
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # コードをチェックアウト
+      # リポジトリをクローン（Actions内では不要だが安全のため）
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 必要なツールをインストール
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y tar unzip wget build-essential git python3 python3-pip
+      # pacman インストーラーをダウンロード
+      - name: Download devkitPro pacman installer
+        run: wget -O $HOME/install-devkitpro-pacman https://raw.githubusercontent.com/enswapwar/mikann-file-downloader/main/tools/install-devkitpro-pacman
 
-      # devkitPro の pacman スクリプト取得とインストール
-      - name: Install devkitPro
-        run: |
-          DEVKITPRO=$HOME/devkitpro
-          DEVKITARM=$DEVKITPRO/devkitARM
-          mkdir -p $DEVKITPRO
-          wget -O $DEVKITPRO/install-devkitpro-pacman https://apt.devkitpro.org/install-devkitpro-pacman
-          chmod +x $DEVKITPRO/install-devkitpro-pacman
-          $DEVKITPRO/install-devkitpro-pacman --noninteractive
-          echo "export DEVKITPRO=$DEVKITPRO" >> $GITHUB_ENV
-          echo "export DEVKITARM=$DEVKITARM" >> $GITHUB_ENV
-          echo "export PATH=$DEVKITARM/bin:$DEVKITPRO/tools/bin:$PATH" >> $GITHUB_ENV
+      # 実行権限を付与
+      - name: Make installer executable
+        run: chmod +x $HOME/install-devkitpro-pacman
 
-      # ctrulib をクローン
-      - name: Clone ctrulib
-        run: |
-          mkdir -p $DEVKITPRO/portlibs
-          git clone --depth=1 https://github.com/devkitPro/ctrulib.git $DEVKITPRO/portlibs/ctrulib
+      # pacman インストール
+      - name: Install devkitPro pacman
+        run: sudo $HOME/install-devkitpro-pacman
 
-      # build ディレクトリ作成
+      # 必要なツールを pacman 経由でインストール
+      - name: Install devkitARM and ctrulib
+        run: |
+          sudo dkp-pacman -Syu --noconfirm
+          sudo dkp-pacman -S --noconfirm devkitARM ctrulib
+
+      # 環境変数を設定
+      - name: Set environment variables
+        run: |
+          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+          echo "PATH=/opt/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_ENV
+
+      # Build フォルダ作成
       - name: Create build directory
         run: mkdir -p build
 
-      # CIA をビルド
+      # CIA ビルド
       - name: Build CIA
         run: make all
 
-      # ビルド成果物をアップロード
+      # アーティファクトとして出力
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mikann-file-downloader-build
-          path: |
-            build/*.cia
-            build/*.3dsx
-            build/*.elf
+          name: build-artifacts
+          path: build/*.cia
