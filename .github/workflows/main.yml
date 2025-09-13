@@ -2,45 +2,42 @@ name: Build Mikann File Downloader CIA
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-cia:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. リポジトリをチェックアウト
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      # 1. リポジトリをチェックアウト
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    # 2. tools 内の pacman を展開して PATH に追加
-    - name: Setup devkitPro pacman
-      run: |
-        mkdir -p $HOME/devkitpro
-        # tools に置いた pacman の zip を展開
-        unzip tools/devkitpro-pacman.zip -d $HOME/devkitpro
-        export PATH="$HOME/devkitpro:$PATH"
-        # pacman が使えるか確認
-        $HOME/devkitpro/pacman --version
+      # 2. ZIP を展開して devkitpro 環境を作る
+      - name: Setup devkitPro pacman
+        run: |
+          mkdir -p $HOME/devkitpro
+          unzip tools/devkitpro-pacman.zip -d $HOME/devkitpro
+          export PATH="$HOME/devkitpro:$PATH"
+          $HOME/devkitpro/pacman --version
 
-    # 3. devkitARM と ctrulib を pacman でインストール
-    - name: Install devkitARM and ctrulib
-      run: |
-        $HOME/devkitpro/pacman -Syu --noconfirm devkitARM ctrulib
+      # 3. devkitARM と ctrulib を pacman で入れる
+      - name: Install devkitARM and ctrulib
+        run: |
+          $HOME/devkitpro/pacman -Syu --noconfirm devkitARM ctrulib
 
-    # 4. ビルド用ディレクトリ作成
-    - name: Prepare build directory
-      run: mkdir -p build
+      # 4. build ディレクトリ作る
+      - name: Make build dir
+        run: mkdir -p build
 
-    # 5. CIA ビルド
-    - name: Build CIA
-      run: make all
+      # 5. CIA ビルド
+      - name: Build CIA
+        run: make all
 
-    # 6. アーティファクトとして出力
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: mikann-file-downloader
-        path: build/*.cia
+      # 6. artifacts として出力
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mikann-file-downloader
+          path: build/*.cia
