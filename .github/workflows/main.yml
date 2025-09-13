@@ -2,101 +2,42 @@ name: Build 3DS CIA
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: devkitpro/devkitarm:latest
-
-    env:
-      DEVKITPRO: /opt/devkitpro
-      DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Export devkit env (for Makefile that uses DEVKITARM)
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget make gcc g++ git unzip xz-utils build-essential python3
+
+      - name: Install devkitPro
+        run: |
+          wget https://apt.devkitpro.org/install-devkitpro-pacman
+          chmod +x install-devkitpro-pacman
+          sudo ./install-devkitpro-pacman
+          sudo dkp-pacman -Sy --noconfirm devkitARM general-tools 3ds-dev
+
+      - name: Set environment variables
         run: |
           echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
           echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-          echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
+          echo "PATH=/opt/devkitpro/devkitARM/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Install system utilities (inside container)
+      - name: Build project
         run: |
-          apt-get update
-          apt-get install -y wget unzip p7zip-full cmake build-essential libpng-dev libvorbis-dev libsndfile1-dev
+          make
 
-      - name: Install makerom (official binary if available)
-        run: |
-          set -e
-          wget -q -O makerom.zip "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.3/makerom-v0.18.3-ubuntu_x86_64.zip" || true
-          if [ -f makerom.zip ]; then
-            unzip -o makerom.zip -d makerom_tmp || true
-            if [ -f makerom_tmp/makerom ]; then
-              mv makerom_tmp/makerom /usr/local/bin/makerom
-              chmod +x /usr/local/bin/makerom
-            elif [ -f makerom_tmp/makerom-bin/makerom ]; then
-              mv makerom_tmp/makerom-bin/makerom /usr/local/bin/makerom
-              chmod +x /usr/local/bin/makerom
-            fi
-            rm -rf makerom.zip makerom_tmp
-          fi
-          which makerom || echo "makerom not found (will try to proceed — makerom needed for .cia packaging)"
-
-      - name: Build bannertool (for banner/icon tools)
-        run: |
-          set -e
-          wget -q -O bannertool.zip "https://github.com/carstene1ns/3ds-bannertool/archive/refs/tags/1.2.1.zip" || true
-          if [ -f bannertool.zip ]; then
-            unzip -o bannertool.zip
-            mkdir -p 3ds-bannertool-1.2.1/build
-            cd 3ds-bannertool-1.2.1/build
-            cmake ..
-            make -j$(nproc) || true
-            if [ -f bannertool ]; then
-              mv bannertool /usr/local/bin/bannertool
-              chmod +x /usr/local/bin/bannertool
-            fi
-            cd $GITHUB_WORKSPACE
-            rm -rf bannertool.zip
-          fi
-          which bannertool || echo "bannertool not found (icon/banner steps may fail)"
-
-      - name: Ensure minimal meta.rsf exists
-        run: |
-          if [ ! -f meta.rsf ]; then
-            cat > meta.rsf <<'EOF'
-BasicInfo:
-  Title                   : "Mikann File Downloader"
-  ProductCode             : "CTR-P-MIKN"
-  UniqueId                : 0x12345
-SystemControlInfo:
-  SaveDataSize            : 0KB
-  RemasterVersion         : 1
-EOF
-          fi
-
-      - name: Build project (make -> .elf/.3dsx/.cia per Makefile)
-        run: |
-          mkdir -p build
-          make clean || true
-          make -j$(nproc)
-
-      - name: Collect artifacts
-        run: |
-          mkdir -p artifacts
-          cp -f build/*.cia artifacts/ 2>/dev/null || true
-          cp -f build/*.elf artifacts/ 2>/dev/null || true
-          cp -f build/*.3dsx artifacts/ 2>/dev/null || true
-          cp -f ./*.cia artifacts/ 2>/dev/null || true
-          ls -l artifacts || true
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload CIA artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: cia-build
-          path: artifacts/
+          name: 3ds-cia
+          path: "*.cia"
