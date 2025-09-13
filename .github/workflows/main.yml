@@ -1,49 +1,57 @@
-name: Build 3DS CIA
+name: Build CIA
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  build-cia:
+  build:
     runs-on: ubuntu-latest
 
     env:
-      DEVKITPRO: ${{ github.workspace }}/devkitpro
-      DEVKITARM: ${{ github.workspace }}/devkitpro/devkitARM
-      PATH: ${{ github.workspace }}/devkitpro/devkitARM/bin:$PATH
+      DEVKITPRO: /opt/devkitpro
+      DEVKITARM: /opt/devkitpro/devkitARM
+      PATH: /opt/devkitpro/devkitARM/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: sudo apt update && sudo apt install -y wget bzip2 tar make
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y wget bzip2 tar make gcc g++ git
 
-    - name: Setup devkitARM
-      run: |
-        mkdir -p $DEVKITPRO
-        cd $DEVKITPRO
-        # 最新の devkitARM r47 以降の tar.bz2 直ダウンロードURLに置き換えてください
-        wget -O devkitARM.tar.bz2 https://github.com/devkitPro/buildscripts/releases/download/devkitARM_r47/devkitARM_r47-linux.tar.bz2 || true
-        tar -xjf devkitARM.tar.bz2
-        ls -l $DEVKITARM/bin
+      - name: Setup devkitARM
+        run: |
+          mkdir -p $DEVKITPRO
+          cd $DEVKITPRO
+          wget -O devkitARM.tar.bz2 https://github.com/devkitPro/buildscripts/releases/download/devkitARM_r57/devkitARM_r57-linux.tar.bz2
+          /bin/tar -xjf devkitARM.tar.bz2
+          ls -l $DEVKITARM/bin
 
-    - name: Setup ctrulib
-      run: |
-        mkdir -p $DEVKITPRO/portlibs
-        curl -L https://github.com/devkitPro/ctrulib/archive/refs/heads/master.tar.gz | tar xz -C $DEVKITPRO/portlibs --strip-components=1
+      - name: Setup ctrulib
+        run: |
+          mkdir -p $DEVKITPRO/libctru
+          git clone --depth=1 https://github.com/devkitPro/libctru.git $DEVKITPRO/libctru
+          cd $DEVKITPRO/libctru && make install
 
-    - name: Build CIA
-      run: |
-        mkdir -p build
-        make all
-        ls -l build
+      - name: Build CIA
+        run: |
+          mkdir -p build
+          make all
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: cia-artifacts
-        path: build/*.cia
+      - name: Copy artifacts
+        run: |
+          mkdir -p artifacts
+          cp build/*.cia artifacts/ || true
+          cp build/*.elf artifacts/ || true
+          cp build/*.3dsx artifacts/ || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: artifacts
