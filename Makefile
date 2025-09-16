@@ -9,8 +9,6 @@ INCLUDE := include
 ASSETS := assets
 
 ICON := $(ASSETS)/icon.png
-
-# Output .cia/.3dsx
 OUTPUT := $(BUILD)/$(TARGET)
 
 LIBS := -lctru -lm
@@ -18,7 +16,7 @@ LIBS := -lctru -lm
 CFILES := $(wildcard $(SOURCE)/*.c)
 OFILES := $(CFILES:$(SOURCE)/%.c=$(BUILD)/%.o)
 
-CC := arm-none-eabi-gcc
+CC := $(DEVKITARM)/bin/arm-none-eabi-gcc
 CFLAGS := -g -Wall -O2 -mfloat-abi=hard -mtp=soft -fno-rtti -fno-exceptions -I$(INCLUDE)
 
 .PHONY: all clean
@@ -33,10 +31,11 @@ $(OUTPUT).elf: $(OFILES)
 	$(CC) $(CFLAGS) $(OFILES) -o $@ $(LIBS)
 
 $(OUTPUT).3dsx: $(OUTPUT).elf
-	makerom -f cci -o $(OUTPUT).3dsx -elf $< -target t
+	3dsxtool $< $@
 
 $(OUTPUT).cia: $(OUTPUT).elf
-	makerom -f cia -o $@ -elf $< -rsf meta.rsf -target t -icon $(ICON) -desc "$(APP_DESCRIPTION)" -publisher "$(APP_AUTHOR)" -title "$(APP_TITLE)"
+	makerom -f cia -o $@ -elf $< -rsf meta.rsf -icon $(ICON) \
+		-desc "$(APP_DESCRIPTION)" -publisher "$(APP_AUTHOR)" -title "$(APP_TITLE)"
 
 clean:
-	rm -rf $(BUILD)/*.o $(BUILD)/*.elf $(BUILD)/*.cia
+	rm -rf $(BUILD)/*.o $(BUILD)/*.elf $(BUILD)/*.cia $(BUILD)/*.3dsx
