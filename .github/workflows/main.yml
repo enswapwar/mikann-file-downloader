@@ -1,43 +1,44 @@
-name: Build Mikann File Downloader CIA
+name: Build 3DS CIA
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. リポジトリをチェックアウト
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # 2. ZIP を展開して devkitpro 環境を作る
-      - name: Setup devkitPro pacman
-        run: |
-          mkdir -p $HOME/devkitpro
-          unzip tools/devkitpro-pacman.zip -d $HOME/devkitpro
-          export PATH="$HOME/devkitpro:$PATH"
-          $HOME/devkitpro/pacman --version
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential wget git unzip
 
-      # 3. devkitARM と ctrulib を pacman で入れる
-      - name: Install devkitARM and ctrulib
-        run: |
-          $HOME/devkitpro/pacman -Syu --noconfirm devkitARM ctrulib
+    - name: Install devkitPro pacman
+      run: |
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x install-devkitpro-pacman
+        sudo ./install-devkitpro-pacman
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+        echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
 
-      # 4. build ディレクトリ作る
-      - name: Make build dir
-        run: mkdir -p build
+    - name: Install 3DS toolchain
+      run: |
+        sudo dkp-pacman -Syyu --noconfirm 3ds-dev
 
-      # 5. CIA ビルド
-      - name: Build CIA
-        run: make all
+    - name: Build project
+      run: |
+        mkdir -p build
+        make all
 
-      # 6. artifacts として出力
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mikann-file-downloader
-          path: build/*.cia
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mikann-downloader
+        path: build/*.cia
