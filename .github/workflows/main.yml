@@ -17,7 +17,7 @@ jobs:
       - name: Download devkitPro pacman
         run: |
           mkdir -p $HOME/devkitpro
-          wget https://github.com/devkitPro/pacman/releases/download/v6.0.2/pacman-linux_x86_64.tar.gz -O pacman.tar.gz
+          wget https://github.com/devkitPro/pacman/archive/refs/tags/v6.0.2.tar.gz -O pacman.tar.gz
           tar -xzf pacman.tar.gz -C $HOME/devkitpro
           echo "DEVKITPRO=$HOME/devkitpro" >> $GITHUB_ENV
           echo "DEVKITARM=$HOME/devkitpro/devkitARM" >> $GITHUB_ENV
