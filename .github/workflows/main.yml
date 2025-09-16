@@ -1,4 +1,4 @@
-name: Build 3DS CIA
+name: Build 3DS project
 
 on:
   push:
@@ -11,34 +11,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential wget git unzip
+        sudo apt-get install -y build-essential git wget unzip
 
-    - name: Install devkitPro pacman
+    - name: Setup devkitPro
       run: |
-        wget https://apt.devkitpro.org/install-devkitpro-pacman
-        chmod +x install-devkitpro-pacman
-        sudo ./install-devkitpro-pacman
+        chmod +x tools/install-devkitpro-pacman
+        sudo ./tools/install-devkitpro-pacman
         echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
         echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
         echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
 
-    - name: Install 3DS toolchain
-      run: |
-        sudo dkp-pacman -Syyu --noconfirm 3ds-dev
-
     - name: Build project
       run: |
-        mkdir -p build
-        make all
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: mikann-downloader
-        path: build/*.cia
+        make
